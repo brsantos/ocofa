@@ -5,16 +5,42 @@ source('0_analise_dados.R')
 #-------------------------------------------
 casos <- dados %>%
   group_by(raca_cor) %>%
+  filter(datas_info <= "2020-04-29") %>%
   summarise(n_casos = n())
 
-mortes <- dados %>%
+mortes <- dados %>% 
+  filter(datas_info <= "2020-04-29") %>%
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
   group_by(raca_cor) %>%
   summarise(n_mortes = n())
 
+dados_populacao <- data.frame(raca_cor = c('Brancas', 'Negras'), 
+                              pop = c(pop_branca, pop_negra))
+
+
 letalidade <- inner_join(casos, mortes) %>%
+  inner_join(dados_populacao) %>%
   mutate(letalidade =   ifelse(n_casos == 0, 0, 
-                                        round(100 * n_mortes / n_casos, 1)))
+                                        round(100 * n_mortes / n_casos, 1)), 
+         incidencia = round(100 * n_casos / pop, 4), 
+         mortalidade = round(100 * n_mortes / pop, 4))
+
+
+###--------------------------------------------
+casos_t <- dados %>%
+  group_by(raca_cor, datas_info) %>%
+  filter(datas_info <= "2020-04-29") %>%
+  summarise(n_casos = n())
+
+mortes_t <- dados %>% 
+  filter(datas_info <= "2020-04-29") %>%
+  filter(evolucao ==  "Óbito pelo COVID-19") %>%
+  group_by(raca_cor, datas_info) %>%
+  summarise(n_mortes = n())
+
+
+##  
+
 
 
 #--------------- Sexo -------------------------

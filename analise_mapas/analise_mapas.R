@@ -54,7 +54,8 @@ g <- ggplot(data_plot_dia) + theme_bw() +
   geom_path(data = shp_vitoria.df, aes(long, lat, group = BAIRRO), 
             size = 0.2) + 
   geom_text(aes(x = x_position, y = y_position,
-                 group = datas_character, label = datas_character)) +
+                 group = datas_character, label = datas_character), 
+            family = "Palatino") +
   geom_polygon(aes(x = long, y = lat, group = BAIRRO,  fill = n_casos)) +
   geom_path(aes(long, lat, group = BAIRRO), color = "black", size = 0.1) + 
   coord_equal() + 
@@ -78,7 +79,8 @@ g <- ggplot(data_plot_dia) + theme_bw() +
   geom_polygon(aes(x = long, y = lat, group = BAIRRO,  
                    fill = casos_acumulados)) +
   geom_text(aes(x = x_position, y = y_position,
-                group = datas_character, label = datas_character)) +
+                group = datas_character, label = datas_character), 
+            family = "Palatino") +
   coord_equal() + 
   theme_void() + 
   scale_fill_viridis_c("Número de casos") +
@@ -130,7 +132,8 @@ g <- ggplot(data_plot_dia_negros) + theme_bw() +
             size = 0.2) + 
   geom_polygon(aes(x = long, y = lat, group = BAIRRO,  fill = n_casos)) +
   geom_text(aes(x = x_position, y = y_position,
-                group = datas_character, label = datas_character)) +
+                group = datas_character, label = datas_character), 
+            family = "Palatino") +
   geom_path(aes(long, lat, group = BAIRRO), color = "black", size = 0.1) + 
   coord_equal() + 
   theme_void() + 
@@ -138,8 +141,7 @@ g <- ggplot(data_plot_dia_negros) + theme_bw() +
   theme(axis.text = element_blank())
 
 animacao_casos <- g + 
-  transition_time(datas_info) + 
-  ggtitle('Data = {frame_time}')
+  transition_time(datas_info) 
 
 animation <- animate(animacao_casos, renderer = gifski_renderer(),
                      width = 600, height = 600, duration = 60)
@@ -153,14 +155,15 @@ g <- ggplot(data_plot_dia_negros) + theme_bw() +
             size = 0.2, colour = 'grey80') + 
   geom_polygon(aes(x = long, y = lat, group = BAIRRO,  
                    fill = casos_acumulados)) +
+  geom_text(aes(x = x_position, y = y_position,
+                group = datas_character, label = datas_character)
   coord_equal() + 
   theme_void() + 
   scale_fill_viridis_c("Número de casos") +
   theme(axis.text = element_blank())
 
 animacao_casos <- g + 
-  transition_time(datas_info) + 
-  ggtitle('Data = {frame_time}')
+  transition_time(datas_info) 
 
 animation <- animate(animacao_casos, renderer = gifski_renderer(),
                      width = 600, height = 600, duration = 60)
