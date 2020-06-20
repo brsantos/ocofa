@@ -208,7 +208,7 @@ g + aes(y = incidencia) +
 g + aes(y = mortalidade) + 
   labs(x = "", 
        y = "", 
-       title = "Evolução da taxa de incidencia, por raça/cor",
+       title = "Evolução da taxa de mortalidade, por raça/cor",
        subtitle = "Estado do Espírito Santo - Período de 29/2 a 29/04/2020",
        caption = "Fonte: Painel COVID-19 - Espírito Santo")
 ```
