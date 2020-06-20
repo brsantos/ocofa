@@ -127,7 +127,11 @@ letalidade_t <- inner_join(casos_t, mortes_t) %>%
 
 ```
 
+<<<<<<< HEAD
 ```{r, echo = FALSE, message = FALSE}
+=======
+```{r, echo = FALSE, message = FALSE, results='hide'}
+>>>>>>> 2902f33b0f4de958833cc9e5e429464c271c7575
 knitr::kable(letalidade)
 ```
 
