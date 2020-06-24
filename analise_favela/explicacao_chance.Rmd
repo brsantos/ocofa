@@ -1,0 +1,50 @@
+---
+title: "Como calcular a chance de morte pela Covid-19?"
+author: "Bruno Santos"
+output: 
+  github_document:
+    pandoc_args: --webtex
+---
+
+Considerando os dados disponibilizados pelo painel do Espírito Santo  [(https://coronavirus.es.gov.br/painel-covid-19-es)](https://coronavirus.es.gov.br/painel-covid-19-es) e considerando uma listagem de bairros de Vitória classificados como favela, segundo levantamento do OCOFA, podemos chegar nos seguintes números
+
+```{r, echo = FALSE, message=FALSE}
+library(tidyverse)
+library(lubridate)
+
+path_file <- "https://bi.static.es.gov.br/covid19/MICRODADOS.csv"
+
+# Lendo dados
+dados <- read.csv(path_file, sep = ";", fileEncoding = "ISO-8859-1")
+
+dados_favelas <- read.csv("favelas.csv")
+
+dados_letalidade_favela <- dplyr::filter(dados, Municipio == "VITORIA") %>%
+  janitor::clean_names() %>%
+  mutate(datas_info = as.Date(data),
+         bairro = fct_recode(bairro,
+                    "JOANA D'ARC" = "JOANA DARC")) %>%
+  left_join(dados_favelas) %>%
+  filter(datas_info < today(), 
+         bairro != "Não Encontrado") %>% # 10 casos de bairro não encontrado
+  mutate(mortes = ifelse(evolucao == "Óbito pelo COVID-19", 1, 0), 
+         favela = ifelse(is.na(Indicador), "Não", "Sim")) %>%
+  group_by(favela) %>%
+  summarise(n_casos = n(), 
+            n_mortes = sum(mortes)) %>%
+  mutate(letalidade = round(100 * n_mortes/n_casos, 2))
+
+knitr::kable(dados_letalidade_favela)
+```
+
+Temos então que a letalidade da doença é igual a 4,53% em bairros classificados como favela e 2,86% nos outros bairros. Dessa forma, para uma pessoa infectada a chance dessa pessoa vir a falecer na favela é igual 
+
+$$\mbox{Chance}_F = \frac{4,53\%}{100,00\% - 4,53\%} = 0,04745$$
+
+Agora considerando uma pessoa infectada que não mora na favela, sua chance de vir a falecer é igual a 
+
+$$\mbox{Chance}_O = \frac{2,86\%}{100,00\% - 2,86\%} = 0,02944$$
+Logo, quando comparamos essas duas chances, obtemos
+
+$$\frac{\mbox{Chance}_F}{\mbox{Chance}_O} = 1,6116 \quad \Rightarrow \quad \mbox{Chance}_F = 1,6116 \times \mbox{Chance}_O$$
+Logo, a chance de morrer das pessoas infectadas que moram na favela é 1,6 vezes a chance das pessoas que não moram em favelas em Vitória.

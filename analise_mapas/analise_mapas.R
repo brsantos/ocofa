@@ -3,6 +3,8 @@ library(ggplot2)
 library(gganimate)
 library(lubridate)
 
+## arrumar Joana D'Arc
+
 shp_vitoria <- rgdal::readOGR(dsn = './bairros/', 
                               layer='bairros', verbose = FALSE)
 

@@ -12,7 +12,8 @@ library(janitor)
 dados <- read_excel(path = "microdados.xls", na = '-')
 
 ## limpando nome das variáveis
-dados <- clean_names(dados) # a função clean_names() para primeiro ajuste dos nomes das variaveis
+dados <- clean_names(dados) 
+# a função clean_names() para primeiro ajuste dos nomes das variaveis
 
 
 ## Redefinindo todas variáveis como fatores
