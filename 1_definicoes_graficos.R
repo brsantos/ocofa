@@ -5,35 +5,39 @@ source('0_analise_dados.R')
 #-------------------------------------------
 casos <- dados %>%
   group_by(raca_cor) %>%
-  filter(datas_info <= "2020-04-29") %>%
+  # filter(datas_info <= "2020-04-29") %>%
   summarise(n_casos = n())
 
 mortes <- dados %>% 
-  filter(datas_info <= "2020-04-29") %>%
+  # filter(datas_info <= "2020-04-29") %>%
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
   group_by(raca_cor) %>%
   summarise(n_mortes = n())
 
-dados_populacao <- data.frame(raca_cor = c('Brancas', 'Negras'), 
+pop_branca <- 1481678 
+pop_negra <-  293334+1708796
+
+dados_populacao <- data.frame(raca_cor = c('Brancas', 'Negras'),
                               pop = c(pop_branca, pop_negra))
 
 
 letalidade <- inner_join(casos, mortes) %>%
   inner_join(dados_populacao) %>%
   mutate(letalidade =   ifelse(n_casos == 0, 0, 
-                                        round(100 * n_mortes / n_casos, 1)), 
-         incidencia = round(100 * n_casos / pop, 4), 
+                                        round(100 * n_mortes / n_casos, 1)),
+         incidencia = round(100 * n_casos / pop, 4),
          mortalidade = round(100 * n_mortes / pop, 4))
+
 
 
 ###--------------------------------------------
 casos_t <- dados %>%
   group_by(raca_cor, datas_info) %>%
-  filter(datas_info <= "2020-04-29") %>%
+  # filter(datas_info <= "2020-04-29") %>%
   summarise(n_casos = n())
 
 mortes_t <- dados %>% 
-  filter(datas_info <= "2020-04-29") %>%
+  # filter(datas_info <= "2020-04-29") %>%
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
   group_by(raca_cor, datas_info) %>%
   summarise(n_mortes = n())
@@ -62,12 +66,12 @@ letalidade_sexo <- inner_join(casos_sexo, mortes_sexo) %>%
 #--------------- Grupo etário -------------------------
 # Checar se sexo ignorado está presente 
 casos_idade <- dados %>%
-  group_by(raca_cor, grupo_etario) %>%
+  group_by(raca_cor, faixa_etaria) %>%
   summarise(n_casos = n())
 
 mortes_idade <- dados %>%
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
-  group_by(raca_cor, grupo_etario) %>%
+  group_by(raca_cor, faixa_etaria) %>%
   summarise(n_mortes = n())
 
 letalidade_idade <- inner_join(casos_idade, mortes_idade) %>%
@@ -79,15 +83,17 @@ letalidade_idade <- inner_join(casos_idade, mortes_idade) %>%
 #--------------- Sexo e Grupo etário -------------------------
 # Checar se sexo ignorado está presente 
 casos_sexo_idade <- dados %>%
-  group_by(raca_cor, grupo_etario, sexo) %>%
+  group_by(raca_cor, faixa_etaria, sexo) %>%
   summarise(n_casos = n())
 
 mortes_sexo_idade <- dados %>%
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
-  group_by(raca_cor, grupo_etario, sexo) %>%
+  group_by(raca_cor, faixa_etaria, sexo) %>%
   summarise(n_mortes = n())
 
-letalidade_sexo_idade <- inner_join(casos_sexo_idade, mortes_sexo_idade) %>%
+letalidade_sexo_idade <- 
+  left_join(casos_sexo_idade, mortes_sexo_idade) %>%
+  mutate(n_mortes =   ifelse(is.na(n_mortes), 0, n_mortes)) %>%
   mutate(letalidade =   ifelse(n_casos == 0, 0, 
                                round(100 * n_mortes / n_casos, 1)))
 
@@ -164,9 +170,9 @@ letalidade_sexo_t <- inner_join(casos_sexo_t, mortes_sexo_t) %>%
 #---------------------- Idade  ----------------------------
 #-------------------------------------------
 casos_idade_t <- dados %>%
-  group_by(raca_cor, grupo_etario, datas_info) %>%
+  group_by(raca_cor, faixa_etaria, datas_info) %>%
   summarise(n_casos = n()) %>%
-  tidyr::complete(tidyr::nesting(raca_cor, grupo_etario), 
+  tidyr::complete(tidyr::nesting(raca_cor, faixa_etaria), 
                   datas_info = seq.Date(min(dados$datas_info),
                                         max(dados$datas_info), 
                                         by = "day"), 
@@ -176,9 +182,9 @@ casos_idade_t <- dados %>%
 
 mortes_idade_t <- dados %>%
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
-  group_by(raca_cor, grupo_etario, datas_info) %>%
+  group_by(raca_cor, faixa_etaria, datas_info) %>%
   summarise(n_mortes = n()) %>%
-  tidyr::complete(tidyr::nesting(raca_cor, grupo_etario), 
+  tidyr::complete(tidyr::nesting(raca_cor, faixa_etaria), 
                   datas_info = seq.Date(min(dados$datas_info),
                                         max(dados$datas_info), 
                                         by = "day"), 
@@ -196,9 +202,9 @@ letalidade_idade_t <- inner_join(casos_idade_t, mortes_idade_t) %>%
 #---------------------- Sexo e Idade  ------------------------
 #-------------------------------------------
 casos_sexo_idade_t <- dados %>%
-  group_by(raca_cor, sexo, grupo_etario, datas_info) %>%
+  group_by(raca_cor, sexo, faixa_etaria, datas_info) %>%
   summarise(n_casos = n()) %>%
-  tidyr::complete(tidyr::nesting(raca_cor, sexo, grupo_etario), 
+  tidyr::complete(tidyr::nesting(raca_cor, sexo, faixa_etaria), 
                   datas_info = seq.Date(min(dados$datas_info),
                                         max(dados$datas_info), 
                                         by = "day"), 
@@ -208,9 +214,9 @@ casos_sexo_idade_t <- dados %>%
 
 mortes_sexo_idade_t <- dados %>%
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
-  group_by(raca_cor, sexo, grupo_etario, datas_info) %>%
+  group_by(raca_cor, sexo, faixa_etaria, datas_info) %>%
   summarise(n_mortes = n()) %>%
-  tidyr::complete(tidyr::nesting(raca_cor, sexo, grupo_etario), 
+  tidyr::complete(tidyr::nesting(raca_cor, sexo, faixa_etaria), 
                   datas_info = seq.Date(min(dados$datas_info),
                                         max(dados$datas_info), 
                                         by = "day"), 

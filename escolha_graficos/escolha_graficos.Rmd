@@ -1,0 +1,198 @@
+---
+title: "Escolha de gráficos"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, 
+                      warning = FALSE)
+```
+
+
+```{r libraries}
+library(tidyverse)
+library(highcharter)
+
+path_file <- "https://bi.static.es.gov.br/covid19/MICRODADOS.csv"
+
+pop_branca <- 1481678 
+pop_negra <-  293334+1708796
+
+dados_populacao <- data.frame(raca_cor = c('Brancas', 'Negras'), 
+                              pop = c(pop_branca, pop_negra))
+
+# Lendo dados
+dados_totais <- 
+  read.csv(path_file, sep = ";", fileEncoding = "ISO-8859-1")
+
+# Limpando os nomes das variaveis
+dados_totais <- janitor::clean_names(dados_totais)
+
+# Mudando nome da variável data, pois data também é uma função do R 
+# e isso pode causar problemas
+dados_totais <- dados_totais %>% 
+  mutate(datas_info = as.Date(dados_totais$data)) 
+
+## Criando categoria Cor/Raça negra
+dados_totais$raca_cor <- forcats::fct_recode(dados_totais$raca_cor, 
+                                      Brancas = "Branca",         
+                                      Negras = "Parda",
+                                      Negras = "Preta")
+
+## Mudando categorização da variável sexo
+dados_totais$sexo <- 
+  forcats::fct_recode(dados_totais$sexo,
+                      Masculino = "M",
+                      Feminino = "F",
+                      Ignorado = "I")
+
+## Criando faixas etárias
+dados_totais$grupo_etario <-
+  forcats::fct_recode(dados_totais$faixa_etaria,
+                       Jovens = "0 a 4 anos",
+                       Jovens = "05 a 9 anos",
+                       Jovens = "10 a 19 anos",
+                       Jovens = "20 a 29 anos",
+                       Adultos = "30 a 39 anos",
+                       Adultos = "40 a 49 anos",
+                       Adultos = "50 a 59 anos",
+                       Idosos = "60 a 69 anos",
+                       Idosos = "70 a 79 anos",
+                       Idosos = "80 a 89 anos",
+                       Idosos = "90 anos ou mais")
+
+
+## Filtrando a base e deixando só com pessoas brancas e negras.
+dados <- dados_totais %>% 
+  filter(raca_cor == "Negras" | raca_cor == "Brancas")
+```
+
+```{r}
+casos <- dados %>%
+  group_by(raca_cor) %>%
+  summarise(n_casos = n()) 
+  
+mortes <- dados %>% 
+  filter(evolucao ==  "Óbito pelo COVID-19") %>%
+  group_by(raca_cor) %>%
+  summarise(n_mortes = n()) 
+
+letalidade <- inner_join(casos, mortes) %>%
+  inner_join(dados_populacao) %>%
+  mutate(letalidade =   ifelse(n_casos == 0, 0, 
+                               round(100 * n_mortes / n_casos, 2)))
+```
+
+```{r}
+## Leitura dos dados de favelas
+dados_favelas <- read.csv("../analise_favela/favelas.csv")
+
+letalidade_favelas <- dados %>%
+  filter(municipio == "VITORIA") %>%
+  mutate(bairro = fct_recode(bairro,
+                    "JOANA D'ARC" = "JOANA DARC")) %>%
+  left_join(dados_favelas) %>%
+  mutate(mortes = ifelse(evolucao == "Óbito pelo COVID-19", 1, 0), 
+         favela = ifelse(is.na(Indicador), "Não", "Sim")) %>%
+  group_by(favela) %>%
+  summarise(n_casos = n(), 
+            n_mortes = sum(mortes)) %>%
+  mutate(letalidade = round(100 * n_mortes/n_casos, 2))
+```
+
+
+## Gráfico 1
+
+```{r pressure}
+grafico <- hchart(letalidade, type = "column", 
+       hcaes(x = raca_cor, y = letalidade, color = raca_cor)) %>%
+  hc_colors("#440154FF") %>%
+  hc_title(text = "Taxa de letalidade da COVID-19 no ES") %>%
+  hc_xAxis(title = list(text = "Pessoas")) %>%
+  hc_yAxis(title = list(text = "Letalidade (%)")) %>%
+  hc_credits(
+    enabled = TRUE,
+    text = "Fonte: Painel COVID-19 Espírito Santo",
+    href = "https://coronavirus.es.gov.br/painel-covid-19-es")
+grafico
+```
+
+## Gráfico 2 (mudando tema do gráfico 1)
+
+```{r}
+grafico %>% 
+  hc_add_theme(hc_theme_538())
+```
+
+## Gráfico 3 (mudando tema do gráfico 1)
+
+```{r}
+grafico %>%
+  hc_add_theme(hc_theme_chalk())
+```
+
+
+## Gráfico 4 (mudando tema do gráfico 1)
+
+```{r}
+grafico %>%
+  hc_add_theme(hc_theme_ffx())
+```
+
+## Gráfico 5 (mudando tema do gráfico 1)
+
+```{r}
+grafico %>%
+  hc_add_theme(hc_theme_ft())
+```
+
+# Considerando os dados da separação entre favelas e outros bairros
+
+## Gráfico 6
+
+```{r}
+grafico_favela <- hchart(letalidade_favelas, type = "column", 
+       hcaes(x = favela, y = letalidade, color = favela)) %>%
+  hc_colors("#440154FF") %>%
+  hc_title(text = "Taxa de letalidade da COVID-19 no ES") %>%
+  hc_xAxis(title = list(text = "Favela")) %>%
+  hc_yAxis(title = list(text = "Letalidade (%)")) %>%
+  hc_credits(
+    enabled = TRUE,
+    text = "Fonte: Painel COVID-19 Espírito Santo",
+    href = "https://coronavirus.es.gov.br/painel-covid-19-es")
+grafico_favela
+```
+
+## Gráfico 7 (mudando tema do gráfico 6)
+
+```{r}
+grafico_favela %>% 
+  hc_add_theme(hc_theme_538())
+```
+
+## Gráfico 8 (mudando tema do gráfico 6)
+
+```{r}
+grafico_favela %>%
+  hc_add_theme(hc_theme_chalk())
+```
+
+
+## Gráfico 9 (mudando tema do gráfico 6)
+
+```{r}
+grafico_favela %>%
+  hc_add_theme(hc_theme_ffx())
+```
+
+## Gráfico 10 (mudando tema do gráfico 6)
+
+```{r}
+grafico_favela %>%
+  hc_add_theme(hc_theme_ft())
+```
+
+
+# Gráficos considerando variações ao longo do tempo
+
