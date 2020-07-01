@@ -235,7 +235,6 @@ casos <- dados %>%
   group_by(raca_cor) %>%
   summarise(n_casos = n()) 
   
-
 mortes <- dados %>% 
   filter(evolucao ==  "Óbito pelo COVID-19") %>%
   group_by(raca_cor) %>%
