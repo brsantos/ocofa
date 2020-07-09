@@ -2,6 +2,8 @@ library(dplyr)
 library(ggplot2)
 library(gganimate)
 library(lubridate)
+library(forcats)
+library(leaflet)
 
 ## arrumar Joana D'Arc
 
@@ -28,7 +30,9 @@ dados <- read.csv(path_file, sep = ";", fileEncoding = "ISO-8859-1")
 
 dados_vitoria_dia <- dplyr::filter(dados, Municipio == "VITORIA") %>%
   janitor::clean_names() %>%
-  mutate(datas_info = as.Date(data))   %>%
+  mutate(datas_info = as.Date(data_diagnostico), 
+         bairro = fct_recode(bairro,
+                             "JOANA D'ARC" = "JOANA DARC"))   %>%
   filter(datas_info < today()) %>%
   mutate(mortes = ifelse(evolucao == "Óbito pelo COVID-19", 1, 0)) %>%
   group_by(bairro, datas_info) %>%
