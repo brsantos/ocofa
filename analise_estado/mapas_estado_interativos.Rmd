@@ -1,0 +1,196 @@
+---
+title: "Mapas do Estado do Espírito Santo"
+author: "Bruno Santos"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(gganimate)
+library(lubridate)
+library(forcats)
+library(leaflet)
+library(rgdal)
+
+shp_es <- rgdal::readOGR(dsn = './es_municipios/', 
+                              layer = 'ES_Municipios_2019', 
+                              verbose = FALSE)
+
+plot(shp_es@data)
+plot(shp_es)
+
+## Lendo dados de Vitória
+path_file <- "https://bi.static.es.gov.br/covid19/MICRODADOS.csv"
+
+# Tentando encontrar o encoding do arquivo
+readr::guess_encoding("https://bi.static.es.gov.br/covid19/MICRODADOS.csv")
+
+# Lendo dados
+dados <- read.csv(path_file, sep = ";", fileEncoding = "ISO-8859-1")
+
+dados_es <- dados %>%
+  janitor::clean_names() %>%
+  mutate(datas_info = as.Date(data_notificacao), 
+         raca_cor = fct_recode(raca_cor, 
+                               Brancas = "Branca",         
+                               Negras = "Parda",
+                               Negras = "Preta"))   %>%
+  filter(datas_info < today()) %>%
+  mutate(mortes = ifelse(evolucao == "Óbito pelo COVID-19", 1, 0), 
+         mortes_n = ifelse(mortes == 1 & raca_cor == "Negras", 1, 0)) %>%
+  group_by(municipio) %>%
+  summarise(n_casos = n(), 
+            n_mortes = sum(mortes), 
+            n_mortes_negras = sum(mortes_n)) %>%
+  mutate(letalidade = round(100 * n_mortes/n_casos, 2), 
+         percentual_negro_m = ifelse(n_mortes > 0 , 
+                                     100 * n_mortes_negras/n_mortes, 
+                                     0))
+
+shp_es@data$municipio <-
+  iconv(shp_es@data$NM_MUN, from = 'UTF-8', to = 'ASCII//TRANSLIT') %>%
+  toupper()
+
+shp_es@data <- shp_es@data %>%
+  left_join(dados_es) 
+
+# Transformando o formato de latitude e longitude
+es_ll <- spTransform(shp_es, CRS("+init=epsg:4326"))
+
+# Create a color palette for the map:
+mypalette_l <- colorNumeric(palette = "viridis", 
+                            domain = es_ll@data$letalidade, 
+                            na.color = "transparent")
+
+mypalette_n <- colorNumeric(palette = "viridis", 
+                            domain = es_ll@data$n_casos, 
+                            na.color = "transparent")
+
+mypalette_p <- colorNumeric(palette = "viridis", 
+                            domain = es_ll@data$percentual_negro_m, 
+                            na.color = "transparent")
+
+
+mypalette_m <- colorNumeric(palette = "viridis", 
+                            domain = es_ll@data$n_mortes, 
+                            na.color = "transparent")
+
+
+
+# Prepare the text for tooltips:
+mytext <- paste(
+  "Municipio: ", es_ll@data$municipio,"<br/>", 
+  "Número de casos: ", es_ll@data$n_casos, "<br/>", 
+  "Número de mortes: ", es_ll@data$n_mortes, "<br/>",
+  "Número de mortes negras: ", es_ll@data$n_mortes_negras, "<br/>",
+  "Letalidade: ", es_ll@data$letalidade, "<br/>",
+  sep = "") %>%
+  lapply(htmltools::HTML)
+```
+
+## Mapa de letalidade
+
+```{r, echo=FALSE}
+# Final Map
+leaflet() %>% 
+  addTiles()  %>% 
+  setView(lat = -19.6, lng = -40.97, zoom = 7) %>%
+  addPolygons(data = es_ll, 
+              fillColor = ~mypalette_l(letalidade), 
+              stroke = TRUE, 
+              fillOpacity = 0.9, 
+              color="white", 
+              weight = 0.3,
+              label = mytext,
+              labelOptions = labelOptions( 
+                style = list("font-weight" = "normal", padding = "3px 8px"), 
+                textsize = "13px", 
+                direction = "auto"
+              )) %>%
+  addLegend(data = es_ll, 
+            pal = mypalette_l, 
+            values = ~ letalidade, 
+            opacity = 0.9, 
+            title = "Letalidade (%)", position = "bottomleft" )
+```
+
+## Número de casos
+
+```{r, echo=FALSE}
+# Final Map
+leaflet() %>% 
+  addTiles()  %>% 
+  setView(lat = -19.6, lng = -40.97, zoom = 7) %>%
+  addPolygons(data = es_ll, 
+              fillColor = ~mypalette_n(n_casos), 
+              stroke = TRUE, 
+              fillOpacity = 0.9, 
+              color="white", 
+              weight = 0.3,
+              label = mytext,
+              labelOptions = labelOptions( 
+                style = list("font-weight" = "normal", padding = "3px 8px"), 
+                textsize = "13px", 
+                direction = "auto"
+              )) %>%
+  addLegend(data = es_ll, 
+            pal = mypalette_n, 
+            values = ~ n_casos, 
+            opacity = 0.9, 
+            title = "Número de casos", position = "bottomleft" )
+```
+
+
+## Número de mortes
+
+```{r, echo = FALSE}
+# Final Map
+leaflet() %>% 
+  addTiles()  %>% 
+  setView(lat = -19.6, lng = -40.97, zoom = 7) %>%
+  addPolygons(data = es_ll, 
+              fillColor = ~mypalette_m(n_mortes), 
+              stroke = TRUE, 
+              fillOpacity = 0.9, 
+              color = "white", 
+              weight = 0.3,
+              label = mytext,
+              labelOptions = labelOptions( 
+                style = list("font-weight" = "normal", padding = "3px 8px"), 
+                textsize = "13px", 
+                direction = "auto"
+              )) %>%
+  addLegend(data = es_ll, 
+            pal = mypalette_m, 
+            values = ~ n_mortes, 
+            opacity = 0.9, 
+            title = "Número de mortes", position = "bottomleft" )
+```
+
+## Percentual de mortes relativo a pessoas negras
+
+```{r, echo = FALSE}
+# Final Map
+leaflet() %>% 
+  addTiles()  %>% 
+  setView(lat = -19.6, lng = -40.97, zoom = 7) %>%
+  addPolygons(data = es_ll, 
+              fillColor = ~mypalette_p(percentual_negro_m), 
+              stroke = TRUE, 
+              fillOpacity = 0.9, 
+              color = "white", 
+              weight = 0.3,
+              label = mytext,
+              labelOptions = labelOptions( 
+                style = list("font-weight" = "normal", padding = "3px 8px"), 
+                textsize = "13px", 
+                direction = "auto"
+              )) %>%
+  addLegend(data = es_ll, 
+            pal = mypalette_p, 
+            values = ~ percentual_negro_m, 
+            opacity = 0.9, 
+            title = "Percentual de mortes negras (%)", 
+            position = "bottomleft" )
+```
